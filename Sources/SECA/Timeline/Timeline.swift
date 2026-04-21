@@ -55,9 +55,11 @@ public final class Timeline<N: Node>: @unchecked Sendable {
     /// If `maxCapacity > 0` and the limit is exceeded, the oldest events are evicted.
     func record(_ state: N) {
         lock.withLock {
-            // Truncate everything after cursor (redo branch)
+            // Truncate everything after cursor (redo branch).
+            // removeSubrange is O(k) where k = removed elements; avoids the O(n)
+            // full-array copy that Array(_events.prefix(cursor+1)) would produce.
             if cursor < _events.count - 1 {
-                _events = Array(_events.prefix(cursor + 1))
+                _events.removeSubrange((cursor + 1)...)
             }
             _events.append(TimelineEvent(id: UUID(), timestamp: Date(), state: state))
             cursor = _events.count - 1

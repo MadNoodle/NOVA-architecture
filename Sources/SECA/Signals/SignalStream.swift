@@ -51,19 +51,27 @@ public final class SignalStream<S: Sendable>: @unchecked Sendable {
 
     /// Delivers `signal` to every active subscriber.
     public func yield(_ signal: S) {
-        lock.withLock {
-            for cont in continuations.values { cont.yield(signal) }
-        }
+        // Snapshot under lock, then call continuations outside the lock.
+        // Calling continuation.yield() while holding the lock risks deadlock:
+        // on buffer policies that drop values synchronously, onTermination can
+        // fire on the same thread → removeSubscriber tries lock.withLock →
+        // NSLock self-deadlock. Snapshot + release first eliminates that path.
+        let snapshot = lock.withLock { Array(continuations.values) }
+        for cont in snapshot { cont.yield(signal) }
     }
 
     // MARK: Lifecycle
 
     /// Terminates all active subscriber streams.
     public func finish() {
-        lock.withLock {
-            for cont in continuations.values { cont.finish() }
+        // Clear the map under lock, then finish outside the lock (same deadlock
+        // rationale as yield: onTermination can fire synchronously on finish()).
+        let snapshot = lock.withLock {
+            let conts = Array(continuations.values)
             continuations.removeAll()
+            return conts
         }
+        for cont in snapshot { cont.finish() }
     }
 
     /// Number of active subscribers (useful for testing / diagnostics).

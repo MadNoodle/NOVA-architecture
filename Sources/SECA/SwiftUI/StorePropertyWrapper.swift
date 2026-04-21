@@ -72,15 +72,26 @@ public struct Store<S: GlobalStore>: DynamicProperty {
 // MARK: - View modifier
 
 extension View {
-    /// Registers `store` in `StoreRegistry` and injects it into the view hierarchy.
-    ///
-    /// Call this on your root `Scene` or `View` so every descendant that uses
-    /// `@Store` can resolve the same instance:
+    /// Registers `store` in `StoreRegistry` so every descendant that uses `@Store` can
+    /// resolve the same instance.
     ///
     /// ```swift
-    /// WindowGroup { RootView() }
-    ///     .registeringStore(AppStore())
+    /// // In your App struct — hold the store in a `let` property, not inline:
+    /// struct MyApp: App {
+    ///     let store = AppStore()          // ← retained here, created once
+    ///     var body: some Scene {
+    ///         WindowGroup { RootView().registeringStore(store) }
+    ///     }
+    /// }
     /// ```
+    ///
+    /// > Important: Do **not** construct the store inline (e.g. `.registeringStore(AppStore())`).
+    /// > SwiftUI can evaluate a view's body multiple times; each evaluation would create a fresh
+    /// > store and overwrite the registry, silently discarding previous state. Always hold the
+    /// > store as a `let` constant on the `App` struct (or pass it from the call site).
+    ///
+    /// Registration happens synchronously during modifier application, so `@Store` in any child
+    /// view's `init` will find the instance immediately — no timing gap.
     public func registeringStore<S: GlobalStore>(_ store: S) -> some View {
         StoreRegistry.shared.register(store)
         return self

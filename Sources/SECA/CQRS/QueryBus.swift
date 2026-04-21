@@ -23,7 +23,7 @@ public actor QueryBus {
 
     // MARK: Internal types
 
-    private struct Registration: @unchecked Sendable {
+    private struct Registration: Sendable {
         let handle: @Sendable (Any) async throws -> Any
         let policy: QueryCachePolicy
     }

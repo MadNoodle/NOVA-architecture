@@ -7,12 +7,15 @@ struct CounterPanelView: View {
     @ObservedNode var counter: NodeObserver<CounterNode>
     private let appStore: AppStore
 
-    @State private var stats: TimelineStats = .empty
-
     init(appStore: AppStore) {
         _counter     = ObservedNode(appStore.counter)
         self.appStore = appStore
     }
+
+    // Derived synchronously from the nonisolated timeline on every render.
+    // @ObservedNode already re-renders the view after each send(), so stats
+    // are always fresh without a second stateStream subscription.
+    private var stats: TimelineStats { appStore.timelineStats }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,12 +26,6 @@ struct CounterPanelView: View {
             statsBar
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .task {
-            stats = appStore.timelineStats
-            for await _ in counter.store.stateStream.subscribe() {
-                stats = appStore.timelineStats
-            }
-        }
     }
 
     // MARK: Count display
@@ -74,19 +71,19 @@ struct CounterPanelView: View {
                     systemImage: "minus.circle.fill",
                     color: counter.state.isAtMin ? .gray : .red,
                     disabled: counter.state.isAtMin
-                ) { run { await appStore.counter.send { $0.decrement() } } }
+                ) { run { await appStore.counter.send { @Sendable in $0.decrement() } } }
 
                 circleButton(
                     systemImage: "arrow.counterclockwise.circle.fill",
                     color: counter.state.count == 0 ? .gray : .blue,
                     disabled: counter.state.count == 0
-                ) { run { await appStore.counter.send { $0.reset() } } }
+                ) { run { await appStore.counter.send { @Sendable in $0.reset() } } }
 
                 circleButton(
                     systemImage: "plus.circle.fill",
                     color: counter.state.isAtMax ? .gray : .green,
                     disabled: counter.state.isAtMax
-                ) { run { await appStore.counter.send { $0.increment() } } }
+                ) { run { await appStore.counter.send { @Sendable in $0.increment() } } }
             }
 
             HStack(spacing: 6) {
@@ -170,7 +167,7 @@ struct CounterPanelView: View {
     private func stepButton(_ step: Int) -> some View {
         let isActive = counter.state.step == step
         return Button("\(step)") {
-            run { await appStore.counter.send { $0.setStep(step) } }
+            run { await appStore.counter.send { @Sendable in $0.setStep(step) } }
         }
         .buttonStyle(.bordered)
         .tint(isActive ? .accentColor : nil)
