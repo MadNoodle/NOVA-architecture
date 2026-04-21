@@ -47,10 +47,15 @@ struct NodeStoreTests {
     func sendEmitsSignals() async {
         let store = NodeStore<CounterNode>()
 
-        // Collect 3 signals inside the Task so no mutable state is shared.
+        // Subscribe BEFORE the Task so the subscription is registered
+        // synchronously. Subscribing inside the Task body is a race: if the
+        // concurrency pool is busy with other parallel tests, the Task may not
+        // start until after the signals are already emitted, causing the for-await
+        // to wait forever for a signal that was already dropped.
+        let sub = store.signals.subscribe()
         let collector = Task<[CounterNode.Signal], Never> {
             var collected: [CounterNode.Signal] = []
-            for await signal in store.signals.subscribe() {
+            for await signal in sub {
                 collected.append(signal)
                 if collected.count == 3 { break }
             }
