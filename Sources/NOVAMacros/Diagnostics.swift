@@ -4,7 +4,7 @@ import SwiftDiagnostics
 
 // MARK: - Diagnostic messages
 
-struct SECADiagnostic: DiagnosticMessage {
+struct NOVADiagnostic: DiagnosticMessage {
     let message: String
     let diagnosticID: MessageID
     let severity: DiagnosticSeverity
@@ -13,7 +13,7 @@ struct SECADiagnostic: DiagnosticMessage {
     static func missingMutating(method: String) -> Self {
         .init(
             message: "'\(method)' calls emit() but is not marked 'mutating' — state changes made in this method won't be visible to NodeStore. Mark it 'mutating'.",
-            diagnosticID: .init(domain: "SECA", id: "missingMutating"),
+            diagnosticID: .init(domain: "NOVA", id: "missingMutating"),
             severity: .warning
         )
     }
@@ -21,13 +21,13 @@ struct SECADiagnostic: DiagnosticMessage {
 
 // MARK: - Fix-it messages
 
-struct SECAFixIt: FixItMessage {
+struct NOVAFixIt: FixItMessage {
     let message: String
     let fixItID: MessageID
 
-    static let addMutating = SECAFixIt(
+    static let addMutating = NOVAFixIt(
         message: "Add 'mutating'",
-        fixItID: .init(domain: "SECA", id: "addMutating")
+        fixItID: .init(domain: "NOVA", id: "addMutating")
     )
 }
 

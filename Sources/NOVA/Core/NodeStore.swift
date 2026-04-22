@@ -88,7 +88,7 @@ public actor NodeStore<N: Node> {
             guard let signal = anySignal as? N.Signal else {
                 #if DEBUG
                 assertionFailure(
-                    "[SECA] Internal type mismatch in emit(): received \(type(of: anySignal)), "
+                    "[NOVA] Internal type mismatch in emit(): received \(type(of: anySignal)), "
                     + "expected \(N.Signal.self). This is a SECA bug — please file an issue."
                 )
                 #endif

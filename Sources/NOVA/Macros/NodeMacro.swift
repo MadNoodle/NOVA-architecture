@@ -7,7 +7,7 @@
 /// ```swift
 /// @Node
 /// struct CounterNode {
-///     enum Signal: SECA.Signal { case incremented(Int) }
+///     enum Signal: NOVA.Signal { case incremented(Int) }
 ///     var count = 0
 ///     mutating func increment() { count += 1; emit(.incremented(count)) }
 /// }
@@ -37,4 +37,4 @@
 /// any state they write will not be persisted by `NodeStore`.
 @attached(extension, conformances: Node)
 @attached(member, names: named(init()))
-public macro Node() = #externalMacro(module: "SECAMacros", type: "NodeMacro")
+public macro Node() = #externalMacro(module: "NOVAMacros", type: "NodeMacro")

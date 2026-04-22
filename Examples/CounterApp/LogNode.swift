@@ -1,5 +1,5 @@
 import Foundation
-import SECA
+import NOVA
 
 // MARK: - LogNode
 
@@ -21,7 +21,7 @@ struct LogNode: SignalResponder {
         append(message: message, kind: kind)
     }
 
-    enum Signal: SECA.Signal {}  // LogNode broadcasts nothing
+    enum Signal: NOVA.Signal {}  // LogNode broadcasts nothing
 
     // MARK: Entry
 

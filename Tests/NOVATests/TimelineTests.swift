@@ -1,12 +1,12 @@
 import Testing
 import Foundation
-@testable import SECA
+@testable import NOVA
 
 // MARK: - Fixture
 
 @Node
 private struct ScoreNode {
-    enum Signal: SECA.Signal { case changed(Int) }
+    enum Signal: NOVA.Signal { case changed(Int) }
     var score = 0
     mutating func add(_ n: Int) { score += n; emit(.changed(score)) }
     mutating func reset()       { score = 0 }

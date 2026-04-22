@@ -52,7 +52,7 @@ public struct Store<S: GlobalStore>: DynamicProperty {
         guard let resolved = StoreRegistry.shared.resolve(S.self) else {
             fatalError(
                 """
-                [SECA] @Store failed to resolve \(S.self).
+                [NOVA] @Store failed to resolve \(S.self).
 
                 You must register the store before any view that uses @Store appears.
                 Choose one of:

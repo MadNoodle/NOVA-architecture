@@ -1,13 +1,13 @@
 import Testing
 import Foundation
-@testable import SECA
+@testable import NOVA
 
 // MARK: - Fixtures
 // Mirror the counter-app nodes inline so this test target stays self-contained.
 
 @Node
 private struct Counter {
-    enum Signal: SECA.Signal, Equatable {
+    enum Signal: NOVA.Signal, Equatable {
         case incremented(Int)
         case decremented(Int)
         case reset
@@ -37,7 +37,7 @@ private struct Counter {
 
 @Node
 private struct EventLog {
-    enum Signal: SECA.Signal {}
+    enum Signal: NOVA.Signal {}
     struct Entry: Sendable, Equatable {
         let message: String
         let kind: Kind

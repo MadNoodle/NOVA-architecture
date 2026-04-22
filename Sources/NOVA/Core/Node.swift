@@ -1,4 +1,4 @@
-/// The unit of business logic in SECA.
+/// The unit of business logic in NOVA.
 ///
 /// A `Node` is a plain Swift struct: it holds state as stored properties and
 /// expresses mutations as `mutating` methods. The `@Node` macro adds the
@@ -7,7 +7,7 @@
 /// ```swift
 /// @Node
 /// struct CounterNode {
-///     enum Signal: SECA.Signal { case incremented(Int) }
+///     enum Signal: NOVA.Signal { case incremented(Int) }
 ///
 ///     var count = 0
 ///
@@ -72,7 +72,7 @@ extension Node {
         guard let handler = NodeContext._emitHandler else {
             #if DEBUG
             print(
-                "[SECA] ⚠️ emit() called outside NodeStore.send(_:) on \(Self.self) "
+                "[NOVA] ⚠️ emit() called outside NodeStore.send(_:) on \(Self.self) "
                 + "— signal '\(signal)' was dropped. "
                 + "Only call emit() from a mutating method invoked via send { }."
             )

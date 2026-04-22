@@ -1,5 +1,5 @@
 import Testing
-@testable import SECA
+@testable import NOVA
 
 // MARK: - Fixtures
 
@@ -185,20 +185,20 @@ struct SignalBusTests {
 // MARK: - SignalResponder fixtures
 
 private struct Src1: Node {
-    enum Signal: SECA.Signal, Equatable { case fired(Int) }
+    enum Signal: NOVA.Signal, Equatable { case fired(Int) }
     var x = 0
     mutating func fire() { x += 1; emit(.fired(x)) }
     init() {}
 }
 
 private struct Src2: Node {
-    enum Signal: SECA.Signal, Equatable { case burst(String) }
+    enum Signal: NOVA.Signal, Equatable { case burst(String) }
     mutating func burst(_ s: String) { emit(.burst(s)) }
     init() {}
 }
 
 private struct MultiSink: Node {
-    enum Signal: SECA.Signal {}
+    enum Signal: NOVA.Signal {}
     var log: [String] = []
     mutating func onSrc1(_ sig: Src1.Signal) {
         if case .fired(let n) = sig { log.append("s1:\(n)") }
@@ -211,7 +211,7 @@ private struct MultiSink: Node {
 
 private struct EchoNode: Node, SignalResponder {
     typealias Source = Src1
-    enum Signal: SECA.Signal {}
+    enum Signal: NOVA.Signal {}
     var echoed: [Int] = []
     mutating func receive(_ signal: Src1.Signal) {
         if case .fired(let n) = signal { echoed.append(n) }

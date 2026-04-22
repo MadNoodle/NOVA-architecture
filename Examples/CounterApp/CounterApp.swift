@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import SECA
+import NOVA
 
 // MARK: - App entry point
 

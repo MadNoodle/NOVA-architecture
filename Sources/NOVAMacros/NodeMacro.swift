@@ -68,9 +68,9 @@ public struct NodeMacro: ExtensionMacro, MemberMacro {
 
             context.diagnose(Diagnostic(
                 node: fn.name,
-                message: SECADiagnostic.missingMutating(method: fn.name.text),
+                message: NOVADiagnostic.missingMutating(method: fn.name.text),
                 fixIts: [FixIt(
-                    message: SECAFixIt.addMutating,
+                    message: NOVAFixIt.addMutating,
                     changes: [.replace(oldNode: Syntax(fn), newNode: Syntax(corrected))]
                 )]
             ))
@@ -84,7 +84,7 @@ public struct NodeMacro: ExtensionMacro, MemberMacro {
 // MARK: - Plugin entry point
 
 @main
-struct SECAMacrosPlugin: CompilerPlugin {
+struct NOVAMacrosPlugin: CompilerPlugin {
     let providingMacros: [any Macro.Type] = [
         NodeMacro.self,
         QueryMacro.self,

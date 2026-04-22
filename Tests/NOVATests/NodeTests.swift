@@ -1,5 +1,5 @@
 import Testing
-@testable import SECA
+@testable import NOVA
 
 // MARK: - Fixture
 

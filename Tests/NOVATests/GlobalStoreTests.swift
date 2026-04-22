@@ -1,18 +1,18 @@
 import Testing
-@testable import SECA
+@testable import NOVA
 
 // MARK: - Fixtures
 
 @Node
 private struct TaskNode {
-    enum Signal: SECA.Signal { case added(String) }
+    enum Signal: NOVA.Signal { case added(String) }
     var items: [String] = []
     mutating func add(_ item: String) { items.append(item); emit(.added(item)) }
 }
 
 @Node
 private struct SettingsNode {
-    enum Signal: SECA.Signal {}
+    enum Signal: NOVA.Signal {}
     var darkMode = false
     mutating func toggle() { darkMode.toggle() }
 }

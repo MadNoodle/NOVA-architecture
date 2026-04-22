@@ -1,7 +1,7 @@
 import XCTest
 import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
-@testable import SECAMacros
+@testable import NOVAMacros
 
 private let testMacros: [String: any Macro.Type] = [
     "Node": NodeMacro.self,

@@ -1,11 +1,11 @@
-import SECA
+import NOVA
 
 // MARK: - CounterNode
 
 /// Business logic for a bounded integer counter with configurable step size.
 @Node
 struct CounterNode {
-    enum Signal: SECA.Signal {
+    enum Signal: NOVA.Signal {
         case incremented(Int)   // emitted after a successful increment
         case decremented(Int)   // emitted after a successful decrement
         case reset              // emitted when reset to 0

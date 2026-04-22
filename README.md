@@ -37,10 +37,10 @@ Add SECA to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/yourusername/SECA.git", from: "0.5.0"),
+    .package(url: "https://github.com/yourusername/NOVA.git", from: "0.5.0"),
 ],
 targets: [
-    .target(name: "YourApp", dependencies: ["SECA"]),
+    .target(name: "YourApp", dependencies: ["NOVA"]),
 ]
 ```
 
@@ -51,11 +51,11 @@ targets: [
 ### 1. Define a Node
 
 ```swift
-import SECA
+import NOVA
 
 @Node
 struct CounterNode {
-    enum Signal: SECA.Signal { case incremented(Int) }
+    enum Signal: NOVA.Signal { case incremented(Int) }
 
     var count = 0
     mutating func increment() { count += 1; emit(.incremented(count)) }

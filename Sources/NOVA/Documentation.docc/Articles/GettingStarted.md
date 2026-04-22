@@ -17,11 +17,11 @@ A fourth step shows how a second node reacts to the first using ``SignalResponde
 A node is a `Sendable` struct that conforms to ``Node``. Use the ``Node()`` macro to generate the conformance and a default `init()` automatically.
 
 ```swift
-import SECA
+import NOVA
 
 @Node
 struct CounterNode {
-    enum Signal: SECA.Signal {
+    enum Signal: NOVA.Signal {
         case incremented(Int)
         case reset
     }
@@ -69,7 +69,7 @@ struct LogNode: SignalResponder {
 A ``GlobalStore`` is a reference-type container (typically `final class`) that owns one ``NodeStore`` per node and wires signal routing in `init`.
 
 ```swift
-import SECA
+import NOVA
 
 final class AppStore: GlobalStore {
     let counter = NodeStore<CounterNode>()

@@ -1,5 +1,5 @@
 import SwiftUI
-import SECA
+import NOVA
 
 struct ContentView: View {
     @Store var appStore: AppStore

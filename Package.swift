@@ -3,7 +3,7 @@ import PackageDescription
 import CompilerPluginSupport
 
 let package = Package(
-    name: "SECA",
+    name: "NOVA",
     platforms: [
         .iOS(.v17),
         .macOS(.v14),
@@ -11,22 +11,22 @@ let package = Package(
         .visionOS(.v1)
     ],
     products: [
-        .library(name: "SECA", targets: ["SECA"]),
+        .library(name: "NOVA", targets: ["NOVA"]),
     ],
     dependencies: [
-        // Build-time only — not a runtime dependency of the SECA library.
+        // Build-time only — not a runtime dependency of the NOVA library.
         .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "602.0.0-latest"),
     ],
     targets: [
         // Runtime library
         .target(
-            name: "SECA",
-            dependencies: ["SECAMacros"],
+            name: "NOVA",
+            dependencies: ["NOVAMacros"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         // Compiler plugin (macro implementation)
         .macro(
-            name: "SECAMacros",
+            name: "NOVAMacros",
             dependencies: [
                 .product(name: "SwiftSyntaxMacros",  package: "swift-syntax"),
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
@@ -35,16 +35,16 @@ let package = Package(
         // Runnable macOS demo: `swift run CounterAppDemo`
         .executableTarget(
             name: "CounterAppDemo",
-            dependencies: ["SECA"],
+            dependencies: ["NOVA"],
             path: "Examples/CounterApp",
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
-        // Tests — depends on SECAMacros directly for assertMacroExpansion
+        // Tests — depends on NOVAMacros directly for assertMacroExpansion
         .testTarget(
-            name: "SECATests",
+            name: "NOVATests",
             dependencies: [
-                "SECA",
-                "SECAMacros",
+                "NOVA",
+                "NOVAMacros",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ],
             swiftSettings: [.swiftLanguageMode(.v6)]

@@ -5,7 +5,7 @@
 ///
 /// ```swift
 /// struct CounterNode: Node {
-///     enum Signal: SECA.Signal {
+///     enum Signal: NOVA.Signal {
 ///         case incremented(Int)
 ///         case reset
 ///     }

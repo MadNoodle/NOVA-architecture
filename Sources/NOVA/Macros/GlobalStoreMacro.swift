@@ -48,4 +48,4 @@
 /// ```
 @attached(extension, conformances: GlobalStore)
 @attached(member, names: named(init()))
-public macro GlobalStore(autoRegister: Bool = true) = #externalMacro(module: "SECAMacros", type: "GlobalStoreMacro")
+public macro GlobalStore(autoRegister: Bool = true) = #externalMacro(module: "NOVAMacros", type: "GlobalStoreMacro")

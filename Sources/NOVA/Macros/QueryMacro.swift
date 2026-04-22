@@ -24,4 +24,4 @@
 /// > (class or actor) since the getter mutates the backing cache store.
 @attached(accessor, names: named(get))
 @attached(peer, names: prefixed(_query_))
-public macro Query(cache: QueryCachePolicy = .never) = #externalMacro(module: "SECAMacros", type: "QueryMacro")
+public macro Query(cache: QueryCachePolicy = .never) = #externalMacro(module: "NOVAMacros", type: "QueryMacro")
