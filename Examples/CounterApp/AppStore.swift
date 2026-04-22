@@ -15,13 +15,14 @@ final class AppStore: GlobalStore, @unchecked Sendable {
 
     // MARK: Init
 
+    /// Holds all routing tasks and cancels them on deinit — ensures test isolation
+    /// when AppStore instances are created and destroyed between test runs.
+    private let _wires = WireTasks()
+
     init() {
-        // LogNode declares SignalResponder<CounterNode> — one line wires the whole routing.
-        _routingTask = log.autoWire(to: counter)
+        _wires += log.autoWire(to: counter)
         StoreRegistry.shared.register(self)
     }
-
-    private let _routingTask: Task<Void, Never>
 
     // MARK: Cross-node operations
     //

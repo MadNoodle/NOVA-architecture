@@ -1,6 +1,7 @@
 import SwiftSyntax
 import SwiftSyntaxMacros
 import SwiftCompilerPlugin
+import SwiftDiagnostics
 
 // MARK: - @Node macro implementation
 
@@ -41,6 +42,40 @@ public struct NodeMacro: ExtensionMacro, MemberMacro {
             guard let initDecl = item.decl.as(InitializerDeclSyntax.self) else { return false }
             return initDecl.signature.parameterClause.parameters.isEmpty
         }
+
+        // Scan for methods that call emit() without being marked `mutating`.
+        // Uses AST traversal to avoid false positives from comments/strings.
+        for member in declaration.memberBlock.members {
+            guard let fn = member.decl.as(FunctionDeclSyntax.self),
+                  let body = fn.body else { continue }
+            let isMutating = fn.modifiers.contains {
+                $0.name.tokenKind == .keyword(.mutating)
+            }
+            guard !isMutating, containsEmitCall(in: body) else { continue }
+
+            // Build corrected declaration with `mutating` inserted after
+            // access modifiers (public/internal/private) to produce
+            // `public mutating func` rather than `mutating public func`.
+            var mods = fn.modifiers
+            let accessIdx = mods.lastIndex(where: {
+                [.keyword(.public), .keyword(.internal),
+                 .keyword(.private), .keyword(.fileprivate)]
+                    .contains($0.name.tokenKind)
+            })
+            let insertAt = accessIdx.map { mods.index(after: $0) } ?? mods.startIndex
+            mods.insert(DeclModifierSyntax(name: .keyword(.mutating)), at: insertAt)
+            let corrected = fn.with(\.modifiers, mods)
+
+            context.diagnose(Diagnostic(
+                node: fn.name,
+                message: SECADiagnostic.missingMutating(method: fn.name.text),
+                fixIts: [FixIt(
+                    message: SECAFixIt.addMutating,
+                    changes: [.replace(oldNode: Syntax(fn), newNode: Syntax(corrected))]
+                )]
+            ))
+        }
+
         guard !hasDefaultInit else { return [] }
         return ["public init() {}"]
     }

@@ -71,19 +71,19 @@ struct CounterPanelView: View {
                     systemImage: "minus.circle.fill",
                     color: counter.state.isAtMin ? .gray : .red,
                     disabled: counter.state.isAtMin
-                ) { run { await appStore.counter.send { @Sendable in $0.decrement() } } }
+                ) { counter.send { $0.decrement() } }
 
                 circleButton(
                     systemImage: "arrow.counterclockwise.circle.fill",
                     color: counter.state.count == 0 ? .gray : .blue,
                     disabled: counter.state.count == 0
-                ) { run { await appStore.counter.send { @Sendable in $0.reset() } } }
+                ) { counter.send { $0.reset() } }
 
                 circleButton(
                     systemImage: "plus.circle.fill",
                     color: counter.state.isAtMax ? .gray : .green,
                     disabled: counter.state.isAtMax
-                ) { run { await appStore.counter.send { @Sendable in $0.increment() } } }
+                ) { counter.send { $0.increment() } }
             }
 
             HStack(spacing: 6) {
@@ -95,9 +95,10 @@ struct CounterPanelView: View {
                 }
             }
 
+
             HStack(spacing: 12) {
                 Button {
-                    run { await appStore.undoCounter() }
+                    counter.task { await appStore.undoCounter() }
                 } label: {
                     Label("Undo", systemImage: "arrow.uturn.backward")
                 }
@@ -105,7 +106,7 @@ struct CounterPanelView: View {
                 .disabled(!stats.canUndo)
 
                 Button {
-                    run { await appStore.redoCounter() }
+                    counter.task { await appStore.redoCounter() }
                 } label: {
                     Label("Redo", systemImage: "arrow.uturn.forward")
                 }
@@ -143,10 +144,6 @@ struct CounterPanelView: View {
         return .primary
     }
 
-    private func run(_ action: @escaping () async -> Void) {
-        Task { await action() }
-    }
-
     // MARK: Sub-views
 
     private func circleButton(
@@ -167,7 +164,7 @@ struct CounterPanelView: View {
     private func stepButton(_ step: Int) -> some View {
         let isActive = counter.state.step == step
         return Button("\(step)") {
-            run { await appStore.counter.send { @Sendable in $0.setStep(step) } }
+            counter.send { $0.setStep(step) }
         }
         .buttonStyle(.bordered)
         .tint(isActive ? .accentColor : nil)

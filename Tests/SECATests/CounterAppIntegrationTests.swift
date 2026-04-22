@@ -158,9 +158,7 @@ struct SignalRoutingTests {
         await counterStore.send { $0.increment() }
         await counterStore.send { $0.increment() }
 
-        // Allow bus handler tasks to flush
-        await Task.yield()
-        await Task.yield()
+        await waitUntil { await logStore.state.entries.count == 2 }
 
         let entries = await logStore.state.entries
         #expect(entries.count == 2)
@@ -194,8 +192,7 @@ struct SignalRoutingTests {
             await counterStore.send { $0.increment() }  // last few → .clamped
         }
 
-        await Task.yield()
-        await Task.yield()
+        await waitUntil { await logStore.state.entries.contains { $0.kind == .clamped } }
 
         let entries = await logStore.state.entries
         #expect(entries.contains { $0.kind == .increment })
@@ -219,7 +216,7 @@ struct SignalRoutingTests {
         }
 
         await counterStore.send { $0.increment() }
-        await Task.yield(); await Task.yield()
+        await waitUntil { await logStore.state.entries.count == 1 }
         #expect(await logStore.state.entries.count == 1)
 
         await logStore.send { $0.clear() }
@@ -457,7 +454,7 @@ struct CounterAppEndToEndTests {
         try? await commandBus.send(Dec())
         try? await commandBus.send(Dec())
 
-        await Task.yield(); await Task.yield()
+        await waitUntil { await logStore.state.entries.contains { $0.kind == .decrement } }
 
         let count   = await counterStore.state.count
         let entries = await logStore.state.entries

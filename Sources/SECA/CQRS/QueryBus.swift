@@ -1,3 +1,5 @@
+import Foundation
+
 /// Routes `Query` values to registered async handlers with optional memoization.
 ///
 /// Results are cached **per query instance** — two queries of the same type but
@@ -9,6 +11,11 @@
 ///
 /// // Register — once, at app startup
 /// await bus.register(GetWeeklyStats.self, policy: .forever) { query in
+///     await statsStore.state.computeWeekly(for: query.userId)
+/// }
+///
+/// // Auto-invalidate when a store mutates:
+/// bus.register(GetWeeklyStats.self, invalidateOn: statsStore) { query in
 ///     await statsStore.state.computeWeekly(for: query.userId)
 /// }
 ///
@@ -28,13 +35,25 @@ public actor QueryBus {
         let policy: QueryCachePolicy
     }
 
+    // @unchecked because `value` is `Any` — the actor serialises all access,
+    // so there is no concurrent mutation risk.
+    private struct CacheEntry: @unchecked Sendable {
+        let value: Any
+        /// `nil` means the entry never expires (`.forever` policy).
+        let expiresAt: ContinuousClock.Instant?
+    }
+
     // MARK: State
 
     private var registrations: [ObjectIdentifier: Registration] = [:]
+
     /// Cache keyed first by query TYPE, then by query VALUE (as AnyHashable).
     /// This ensures `GetStats(userId: "alice")` and `GetStats(userId: "bob")` never
     /// collide, while `invalidate(GetStats.self)` can still wipe all entries at once.
-    private var cache: [ObjectIdentifier: [AnyHashable: Any]] = [:]
+    private var cache: [ObjectIdentifier: [AnyHashable: CacheEntry]] = [:]
+
+    /// Tasks that watch a NodeStore's stateStream and invalidate on every mutation.
+    private var invalidationTasks: [ObjectIdentifier: Task<Void, Never>] = [:]
 
     public init() {}
 
@@ -55,7 +74,35 @@ public actor QueryBus {
             },
             policy: policy
         )
-        cache.removeValue(forKey: key)  // reset cache on re-registration
+        cache.removeValue(forKey: key)
+    }
+
+    /// Registers `handler` for query type `Q` and automatically invalidates all
+    /// cached results whenever `store` is mutated.
+    ///
+    /// Equivalent to calling `register(_:policy:.forever:handler:)` and then
+    /// watching the store's `stateStream` to call `invalidate(Q.self)` on every change.
+    ///
+    /// ```swift
+    /// bus.register(GetStats.self, invalidateOn: counterStore) { _ in
+    ///     await counterStore.state.computeStats()
+    /// }
+    /// ```
+    public func register<Q: Query, N: Node>(
+        _ type: Q.Type = Q.self,
+        policy: QueryCachePolicy = .forever,
+        invalidateOn store: NodeStore<N>,
+        handler: @Sendable @escaping (Q) async throws -> Q.Result
+    ) {
+        register(type, policy: policy, handler: handler)
+        let key = ObjectIdentifier(Q.self)
+        invalidationTasks[key]?.cancel()
+        let sub = store.stateStream.subscribe()
+        invalidationTasks[key] = Task { [weak self] in
+            for await _ in sub {
+                await self?.invalidate(Q.self)
+            }
+        }
     }
 
     /// Removes the handler (and all cached results) for query type `Q`.
@@ -63,6 +110,8 @@ public actor QueryBus {
         let key = ObjectIdentifier(type)
         registrations.removeValue(forKey: key)
         cache.removeValue(forKey: key)
+        invalidationTasks[key]?.cancel()
+        invalidationTasks.removeValue(forKey: key)
     }
 
     // MARK: Dispatch
@@ -75,10 +124,17 @@ public actor QueryBus {
         let typeKey  = ObjectIdentifier(Q.self)
         let valueKey = AnyHashable(query)
 
-        // Return cached value if policy allows and a matching entry exists
-        if let reg = registrations[typeKey], case .forever = reg.policy,
-           let cached = cache[typeKey]?[valueKey] as? Q.Result {
-            return cached
+        // Check cache based on policy
+        if let reg = registrations[typeKey], let entry = cache[typeKey]?[valueKey] {
+            switch reg.policy.storage {
+            case .forever:
+                if let result = entry.value as? Q.Result { return result }
+            case .ttl:
+                if let exp = entry.expiresAt, ContinuousClock.now < exp,
+                   let result = entry.value as? Q.Result { return result }
+            case .never:
+                break
+            }
         }
 
         guard let reg = registrations[typeKey] else {
@@ -90,9 +146,17 @@ public actor QueryBus {
             throw QueryBusError.typeMismatch
         }
 
-        if case .forever = reg.policy {
-            cache[typeKey, default: [:]][valueKey] = result
+        // Store in cache according to policy
+        switch reg.policy.storage {
+        case .forever:
+            cache[typeKey, default: [:]][valueKey] = CacheEntry(value: result, expiresAt: nil)
+        case .ttl(let duration):
+            let expiry = ContinuousClock.now.advanced(by: duration)
+            cache[typeKey, default: [:]][valueKey] = CacheEntry(value: result, expiresAt: expiry)
+        case .never:
+            break
         }
+
         return result
     }
 
@@ -107,5 +171,11 @@ public actor QueryBus {
     /// Clears all cached results for all query types.
     public func invalidateAll() {
         cache.removeAll()
+    }
+
+    // MARK: Lifecycle
+
+    deinit {
+        for task in invalidationTasks.values { task.cancel() }
     }
 }

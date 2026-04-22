@@ -127,16 +127,17 @@ struct NodeMacroIntegrationTests {
             }
         }
 
+        // Subscribe before emitting so no yield is needed to warm up the Task.
+        let premiumSub = store.premium.signals.subscribe()
         let echoes = Task<[String], Never> {
             var results: [String] = []
-            for await signal in store.premium.signals.subscribe() {
+            for await signal in premiumSub {
                 if case .added(let item) = signal { results.append(item) }
                 if results.count == 2 { break }
             }
             return results
         }
 
-        await Task.yield()
         await store.tasks.send { $0.add("write tests") }
         await store.tasks.send { $0.add("ship it") }
 

@@ -1,22 +1,24 @@
 /// A `Node` that handles signals emitted by another `Node`.
 ///
-/// Declare this conformance on a node to move signal-handling logic out of
-/// `GlobalStore` and into the node that actually cares about the signals.
+/// Conform a node to `SignalResponder` to declare a typed dependency on
+/// another node's signal stream. Use `NodeStore.autoWire(to:)` to activate
+/// the connection inside your `GlobalStore`.
+///
+/// For nodes that need to receive signals from **multiple** sources, use
+/// the closure-based `autoWire(to:_:)` overload instead — a node cannot
+/// conform to `SignalResponder` more than once.
 ///
 /// ```swift
+/// // Single-source: declare on the node
 /// extension LogNode: SignalResponder {
 ///     typealias Source = CounterNode
-///
-///     mutating func receive(_ signal: CounterNode.Signal) {
-///         switch signal {
-///         case .incremented(let v): append(message: "↑ \(v)", kind: .increment)
-///         // …
-///         }
-///     }
+///     mutating func receive(_ signal: CounterNode.Signal) { ... }
 /// }
+/// _wires += log.autoWire(to: counter)
 ///
-/// // In GlobalStore.init() — one line replaces the manual Task + SignalBus:
-/// _routingTask = log.autoWire(to: counter)
+/// // Multi-source: closure in GlobalStore
+/// _wires += dashboard.autoWire(to: user)   { $0.onUser($1) }
+/// _wires += dashboard.autoWire(to: cart)   { $0.onCart($1) }
 /// ```
 public protocol SignalResponder: Node {
     /// The node whose signals this node wants to receive.
@@ -25,22 +27,51 @@ public protocol SignalResponder: Node {
     mutating func receive(_ signal: Source.Signal)
 }
 
-// MARK: - NodeStore auto-wiring
+// MARK: - Protocol-based wiring (single source, declarative)
 
 extension NodeStore where N: SignalResponder {
 
-    /// Subscribes to `source`'s signal stream and routes every signal to
-    /// `N.receive(_:)` inside an isolated `send` call.
+    /// Subscribes to `source`'s signals and routes each one to `N.receive(_:)`.
     ///
-    /// Hold the returned `Task` for the lifetime of the store to keep the
-    /// subscription active. Cancel it (or let it deinit) to stop routing.
-    ///
-    /// - Parameter source: The store whose signals will be forwarded.
-    /// - Returns: A running `Task` that drives the subscription.
+    /// Add the returned `Task` to a ``WireTasks`` bag so it is cancelled when
+    /// the store is deallocated.
     public nonisolated func autoWire(to source: NodeStore<N.Source>) -> Task<Void, Never> {
-        Task { [source] in
-            for await signal in source.signals.subscribe() {
+        // Subscribe synchronously so signals emitted immediately after autoWire()
+        // returns are not lost while the Task is still starting up.
+        let sub = source.signals.subscribe()
+        return Task {
+            for await signal in sub {
                 await self.send { $0.receive(signal) }
+            }
+        }
+    }
+}
+
+// MARK: - Closure-based wiring (multi-source)
+
+extension NodeStore {
+
+    /// Subscribes to `source`'s signals and forwards each one to `handler`.
+    ///
+    /// Use this overload when a node needs to receive signals from more than one
+    /// source, or when you prefer not to use the ``SignalResponder`` protocol:
+    ///
+    /// ```swift
+    /// _wires += dashboard.autoWire(to: user)    { $0.onUserSignal($1) }
+    /// _wires += dashboard.autoWire(to: cart)    { $0.onCartSignal($1) }
+    /// _wires += dashboard.autoWire(to: orders)  { $0.onOrderSignal($1) }
+    /// ```
+    ///
+    /// Add the returned `Task` to a ``WireTasks`` bag so it is cancelled when
+    /// the store is deallocated.
+    public nonisolated func autoWire<Source: Node>(
+        to source: NodeStore<Source>,
+        _ handler: @Sendable @escaping (inout N, Source.Signal) -> Void
+    ) -> Task<Void, Never> {
+        let sub = source.signals.subscribe()
+        return Task {
+            for await signal in sub {
+                await self.send { handler(&$0, signal) }
             }
         }
     }

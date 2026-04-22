@@ -23,12 +23,44 @@ public protocol Query: Sendable, Hashable {
 // MARK: - Cache policy
 
 /// Controls when a `QueryBus` caches a query's result.
-public enum QueryCachePolicy: Sendable {
+///
+/// Use the static factory properties and methods rather than switching over
+/// the type — the internal representation is intentionally opaque so new
+/// policies can be added without breaking existing call sites.
+///
+/// ```swift
+/// // Never cache:
+/// bus.register(MyQuery.self, policy: .never) { ... }
+///
+/// // Cache forever (until invalidated):
+/// bus.register(MyQuery.self, policy: .forever) { ... }
+///
+/// // Cache for 30 seconds:
+/// bus.register(MyQuery.self, policy: .ttl(.seconds(30))) { ... }
+///
+/// // Auto-invalidate when a NodeStore mutates:
+/// bus.register(MyQuery.self, invalidateOn: myStore) { ... }
+/// ```
+public struct QueryCachePolicy: Sendable {
+
+    // Internal representation — not exposed so new cases don't break callers.
+    enum Storage: Sendable {
+        case never
+        case forever
+        case ttl(Duration)
+    }
+    let storage: Storage
+
     /// Never cache — recompute on every `send`.
-    case never
+    public static let never = QueryCachePolicy(storage: .never)
+
     /// Cache forever — compute once, reuse until `QueryBus.invalidate(_:)` is called.
-    case forever
-    // `.invalidateOn(keyPath)` — observation-based invalidation, arrives in v0.5
+    public static let forever = QueryCachePolicy(storage: .forever)
+
+    /// Cache for `duration`, then recompute on the next `send` after expiry.
+    public static func ttl(_ duration: Duration) -> QueryCachePolicy {
+        QueryCachePolicy(storage: .ttl(duration))
+    }
 }
 
 // MARK: - Errors

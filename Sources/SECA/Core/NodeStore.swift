@@ -85,7 +85,15 @@ public actor NodeStore<N: Node> {
         let signalStream = signals
         let stateStr     = stateStream
         NodeContext.withEmitHandler({ anySignal in
-            guard let signal = anySignal as? N.Signal else { return }
+            guard let signal = anySignal as? N.Signal else {
+                #if DEBUG
+                assertionFailure(
+                    "[SECA] Internal type mismatch in emit(): received \(type(of: anySignal)), "
+                    + "expected \(N.Signal.self). This is a SECA bug — please file an issue."
+                )
+                #endif
+                return
+            }
             signalStream.yield(signal)
         }) {
             mutation(&state)
@@ -125,6 +133,35 @@ public actor NodeStore<N: Node> {
             state = past
             stateStream.yield(state)
         }
+    }
+
+    // MARK: Subscription helpers
+
+    /// Opens a state subscription and atomically captures the current state
+    /// under the same actor isolation — no gap between the two operations.
+    ///
+    /// `NodeObserver` uses this to seed its `@Observable` mirror with the true
+    /// current state while guaranteeing it won't miss any mutation that fires
+    /// between subscription and first observation.
+    public func subscribeWithCurrentState() -> (state: N, stream: AsyncStream<N>) {
+        let stream = stateStream.subscribe()
+        return (state, stream)
+    }
+
+    // MARK: Effects
+
+    /// Schedules an async side-effect against this store.
+    ///
+    /// Use for ad-hoc effects (network, timers, persistence) triggered from a
+    /// signal handler or a view. For app-level flows, prefer `CommandBus` whose
+    /// handlers are already async.
+    ///
+    /// - Returns: The underlying `Task` — discard or `await` its value as needed.
+    @discardableResult
+    public nonisolated func task(
+        _ body: @Sendable @escaping () async -> Void
+    ) -> Task<Void, Never> {
+        Task { await body() }
     }
 
     // MARK: Lifecycle
